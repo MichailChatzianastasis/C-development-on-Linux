@@ -4,7 +4,7 @@
  * Implementation of character devices
  * for Lunix:TNG
  *
- * < Your name here >
+ * < Michail Chatzianastasis, Dimitris Katsiros >
  *
  */
 
@@ -191,8 +191,9 @@ int lunix_chrdev_init(void)
 	debug("initializing character device\n");
 	cdev_init(&lunix_chrdev_cdev, &lunix_chrdev_fops);
 	lunix_chrdev_cdev.owner = THIS_MODULE;
-	
+	lunix_chrdev_cdev.ops= &lunix_chrdev_fops;
 	dev_no = MKDEV(LUNIX_CHRDEV_MAJOR, 0);
+	ret=register_chrdev_region(dev_no,16,"lunix_chrdev");
 	/* ? */
 	/* register_chrdev_region? */
 	if (ret < 0) {
@@ -201,6 +202,7 @@ int lunix_chrdev_init(void)
 	}	
 	/* ? */
 	/* cdev_add? */
+	ret=cdev_add(&lunix_chrdev_cdev,dev_no,16);	
 	if (ret < 0) {
 		debug("failed to add character device\n");
 		goto out_with_chrdev_region;
