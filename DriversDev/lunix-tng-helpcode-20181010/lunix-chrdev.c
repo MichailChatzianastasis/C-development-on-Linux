@@ -91,7 +91,7 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 {
 	/* Declarations */
 	/* ? */
-	int ret;
+	int ret,minor_n;
 
 	debug("entering\n");
 	ret = -ENODEV;
@@ -102,9 +102,15 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	 * Associate this open file with the relevant sensor based on
 	 * the minor number of the device node [/dev/sensor<NO>-<TYPE>]
 	 */
-	
+	 minor_n = MINOR(inode-> i_rdev);
+	 
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
+	struct cdev* new_lunix;
+	new_lunix= inode->i_cdev;
+	filp->private_data=new_lunix;
+	
+
 out:
 	debug("leaving, with ret = %d\n", ret);
 	return ret;
