@@ -4,7 +4,7 @@
  * Implementation of character devices
  * for Lunix:TNG
  *
- * < Michail Chatzianastasis, Dimitris Katsiros >
+ * < Michail Chatzianastasis , Dimitris Katsiros >
  *
  */
 
