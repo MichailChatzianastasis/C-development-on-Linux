@@ -106,9 +106,19 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
-	struct cdev* new_lunix;
+
+	/*struct cdev* new_lunix;
 	new_lunix= inode->i_cdev;
-	filp->private_data=new_lunix;
+	filp->private_data=new_lunix;*/
+
+	struct lunix_chrdev_state_struct* lunix_state;
+	lunix_state = kmalloc(sizeof(lunix_chrdev_state_struct));
+	lunix_state->minor_n = minor_n;
+	lunix_state->f_pos = kmalloc(sizeof(loff_t));
+  *(lunix_state->f_pos) =1 ;
+	filp->private_data = lunix_state;
+
+
 
 
 out:

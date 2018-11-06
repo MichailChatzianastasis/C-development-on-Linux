@@ -18,7 +18,7 @@
 
 /* Compile-time parameters */
 
-#ifdef __KERNEL__ 
+#ifdef __KERNEL__
 
 #include <linux/fs.h>
 #include <linux/kernel.h>
@@ -32,7 +32,8 @@
 struct lunix_chrdev_state_struct {
 	enum lunix_msr_enum type;
 	struct lunix_sensor_struct *sensor;
-
+ 	int minor_n;
+	lofft_t* f_pos;
 	/* A buffer used to hold cached textual info */
 	int buf_lim;
 	unsigned char buf_data[LUNIX_CHRDEV_BUFSZ];
@@ -61,7 +62,6 @@ void lunix_chrdev_destroy(void);
 #define LUNIX_IOC_MAGIC			LUNIX_CHRDEV_MAJOR
 //#define LUNIX_IOC_EXAMPLE		_IOR(LUNIX_IOC_MAGIC, 0, void *)
 
-#define LUNIX_IOC_MAXNR			0	
+#define LUNIX_IOC_MAXNR			0
 
 #endif	/* _LUNIX_H */
-
