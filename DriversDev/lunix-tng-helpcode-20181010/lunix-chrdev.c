@@ -129,14 +129,14 @@ out:
 static int lunix_chrdev_release(struct inode *inode, struct file *filp)
 {
 	/* ? */
+	kfree(lunix_state->f_pos);
+	kfree(lunix_state);
 	return 0;
 }
 
 static long lunix_chrdev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	/* Why? */
-	kfree(lunix_state->f_pos);
-        kfree(lunix_state);
 
 	return -EINVAL;
 }
