@@ -23,6 +23,7 @@ __used
 __attribute__((section("__versions"))) = {
 	{ 0x8cd40129, __VMLINUX_SYMBOL_STR(module_layout) },
 	{ 0x54be60c6, __VMLINUX_SYMBOL_STR(cdev_del) },
+	{ 0xb222a302, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
 	{ 0xd2b09ce5, __VMLINUX_SYMBOL_STR(__kmalloc) },
 	{ 0x405c1144, __VMLINUX_SYMBOL_STR(get_seconds) },
 	{ 0xdcc0883f, __VMLINUX_SYMBOL_STR(cdev_init) },
@@ -40,6 +41,7 @@ __attribute__((section("__versions"))) = {
 	{ 0xc6cbbc89, __VMLINUX_SYMBOL_STR(capable) },
 	{ 0xdb7305a1, __VMLINUX_SYMBOL_STR(__stack_chk_fail) },
 	{ 0xbdfb6dbb, __VMLINUX_SYMBOL_STR(__fentry__) },
+	{ 0x4b06ead4, __VMLINUX_SYMBOL_STR(kmem_cache_alloc_trace) },
 	{ 0xe259ae9e, __VMLINUX_SYMBOL_STR(_raw_spin_lock) },
 	{ 0x4302d0eb, __VMLINUX_SYMBOL_STR(free_pages) },
 	{ 0xa6bbd805, __VMLINUX_SYMBOL_STR(__wake_up) },
