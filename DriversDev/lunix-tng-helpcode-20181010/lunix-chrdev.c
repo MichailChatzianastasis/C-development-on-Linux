@@ -129,8 +129,12 @@ out:
 static int lunix_chrdev_release(struct inode *inode, struct file *filp)
 {
 	/* ? */
+
+	struct lunix_chrdev_state_struct *lunix_state;
+	lunix_state=filp->private_data;
 	kfree(lunix_state->f_pos);
 	kfree(lunix_state);
+	printk("Device file closed,released memory");
 	return 0;
 }
 
