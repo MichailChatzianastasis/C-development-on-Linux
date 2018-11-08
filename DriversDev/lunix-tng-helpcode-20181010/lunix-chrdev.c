@@ -148,6 +148,7 @@ static long lunix_chrdev_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t cnt, loff_t *f_pos)
 {
 	ssize_t ret;
+	int buf_size = 20;
 
 	struct lunix_sensor_struct *sensor;
 	struct lunix_chrdev_state_struct *state;
@@ -157,6 +158,13 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 	sensor = state->sensor;
 	WARN_ON(!sensor);
+	int mpes=0;
+	if(*f_pos==1) { pare_metrhseis();  mpes=1; }
+	if(*f_pos>1 || mpes==1){
+		if(*f_pos + cnt >= buf_size+1) { 
+			//exceds
+		}
+	}
 
 	/* Lock? */
 	/*
