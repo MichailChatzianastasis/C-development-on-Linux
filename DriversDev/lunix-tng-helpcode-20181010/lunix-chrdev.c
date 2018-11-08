@@ -145,6 +145,22 @@ static long lunix_chrdev_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 	return -EINVAL;
 }
 
+//synartisi poy elegxei oi metriseis einai egkires
+static int check_metrhseis();
+
+//synartisi pare metriseis
+static int pare_metrhseis(struct lunix_chrdev_state_struct* lunix_state ){
+	//spinlocks
+	if(check_metrhseis()== 1){
+		size_t buf_size = 20;
+		memcpy(lunix_state->buf_data,/* metrhsh sensora */,buf_size);
+		return 1;
+}
+return 0;
+//spinlock
+}
+
+
 static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t cnt, loff_t *f_pos)
 {
 	ssize_t ret;
@@ -158,12 +174,25 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 	sensor = state->sensor;
 	WARN_ON(!sensor);
-	int mpes=0;
-	if(*f_pos==1) { pare_metrhseis();  mpes=1; }
-	if(*f_pos>1 || mpes==1){
-		if(*f_pos + cnt >= buf_size+1) { 
-			//exceds
+	loff_t* f_pos = state->f_pos;
+	int index,newmetr;
+	index = *f_pos - 1;
+	if(*f_pos==1) {
+			if(pare_metrhseis(state)==0) return 0;}
+	if(*f_pos>=1 ){
+		if(*f_pos -1 + cnt >= buf_size) {
+			//exceeds
+			//have to return cnt buf_size - (*f_pos -1) bytes
+			if(copy_to_user(usrbuf,&(lunix_state->buf_data[index]),buf_size -(*f_pos-1))!=0) return -EFAULT;
+			*f_pos=1;
+			return (buf_size-index);
 		}
+		else{
+		// have to return cnt bytes to user
+		if(copy_to_user(usrbuf,&(lunix_state->buf_data[index]),cnt)!=0) return -EFAULT;
+		*f_pos = *f_pos + cnt;
+		return cnt;
+	}
 	}
 
 	/* Lock? */
