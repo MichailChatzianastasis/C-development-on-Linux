@@ -39,6 +39,7 @@ struct cdev lunix_chrdev_cdev;
  */
 static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *state)
 {
+	//elegxume an oi metrhseis einai freskes
 	struct lunix_sensor_struct *sensor;
 
 	WARN_ON ( !(sensor = state->sensor));
@@ -56,15 +57,28 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
 static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 {
 	struct lunix_sensor_struct *sensor;
+	sensor=state->sensor;
 
-	debug("leaving\n");
 
+	//spinlocks
+	if(lunix_chrdev_state_needs_refresh()== 0){
+		//return 0;
+		//debug("leaving\n");
+	}
+	size_t buf_size = 20;
+	memcpy(state->buf_data,/* metrhsh sensora */,buf_size);
+	// sigoura irthan freska dedomena , ananeose ta kai ananeose tin ora
+	lunix_sensor_update(sensor,);
+	state->buf_timestamp =
+	return 1;
+	//spinlock
 	/*
 	 * Grab the raw data quickly, hold the
 	 * spinlock for as little as possible.
 	 */
 	/* ? */
-	/* Why use spinlocks? See LDD3, p. 119 */
+	/* Why use spinlocks? See LDD	lunix_sensor_update(sensor,);
+3, p. 119 */
 
 	/*
 	 * Any new data available?
@@ -103,6 +117,8 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	 * the minor number of the device node [/dev/sensor<NO>-<TYPE>]
 	 */
 	 minor_n = MINOR(inode-> i_rdev);
+	 int sensor_number = minor_n/8;
+	 int msr_number = minor_n%8;
 
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
@@ -117,7 +133,7 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	lunix_state->f_pos = kmalloc(sizeof(loff_t),GFP_KERNEL);
   *(lunix_state->f_pos) =1 ;
 	filp->private_data = lunix_state;
-
+	lunix_state->buf_timestamp=0;
 
 
 
@@ -145,20 +161,7 @@ static long lunix_chrdev_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 	return -EINVAL;
 }
 
-//synartisi poy elegxei oi metriseis einai egkires
-static int check_metrhseis();
 
-//synartisi pare metriseis
-static int pare_metrhseis(struct lunix_chrdev_state_struct* lunix_state ){
-	//spinlocks
-	if(check_metrhseis()== 1){
-		size_t buf_size = 20;
-		memcpy(lunix_state->buf_data,/* metrhsh sensora */,buf_size);
-		return 1;
-}
-return 0;
-//spinlock
-}
 
 
 static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t cnt, loff_t *f_pos)
@@ -178,7 +181,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	int index,newmetr;
 	index = *f_pos - 1;
 	if(*f_pos==1) {
-			if(pare_metrhseis(state)==0) return 0;}
+			if(lunix_chrdev_state_update(state)==0) return 0;}
 	if(*f_pos>=1 ){
 		if(*f_pos -1 + cnt >= buf_size) {
 			//exceeds
