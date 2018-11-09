@@ -178,7 +178,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 	sensor = state->sensor;
 	WARN_ON(!sensor);
-	loff_t* f_pos = state->f_pos;
+	loff_t* f_pos = state->f_pos
 	int index,newmetr;
 	index = *f_pos - 1;
 	if(*f_pos==1) {
