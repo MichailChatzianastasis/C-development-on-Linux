@@ -29,16 +29,28 @@
 /*
  * Private state for an open character device node
  */
+
+ void initialize_state(struct lunix_chrdev_state_struct* state){
+
+
+	 state->state_snsr = state->minor_n/8;
+	 state->state_msr = state->minor_n%8;
+	 if(state->state_msr%3==0) type = BATT;
+	 else if(state->state_msr%3==1) type = TEMP;
+	 else type = LIGHT;
+
+ }
+
 struct lunix_chrdev_state_struct {
 	enum lunix_msr_enum type;
 	struct lunix_sensor_struct *sensor;
  	int minor_n;
-	loff_t* f_pos;
+	int state_msr;
+	int state_snsr;
 	/* A buffer used to hold cached textual info */
 	int buf_lim;
 	unsigned char buf_data[LUNIX_CHRDEV_BUFSZ];
 	uint32_t buf_timestamp;
-
 	struct semaphore lock;
 
 	/*
