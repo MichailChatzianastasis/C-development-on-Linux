@@ -66,10 +66,10 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 		//debug("leaving\n");
 	}
 	size_t buf_size = 20;
-	memcpy(state->buf_data,/* metrhsh sensora */,buf_size);
+	//memcpy(state->buf_data,/* metrhsh sensora */,buf_size);
 	// sigoura irthan freska dedomena , ananeose ta kai ananeose tin ora
-	lunix_sensor_update(sensor,);
-	state->buf_timestamp =
+//	lunix_sensor_update(sensor,);
+//	state->buf_timestamp =
 	return 1;
 	//spinlock
 	/*
@@ -119,6 +119,7 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	 minor_n = MINOR(inode-> i_rdev);
 	 int sensor_number = minor_n/8;
 	 int msr_number = minor_n%8;
+	 printk("o sensor einai o %d , kai h metrhsh eiani h %d/n",sensor_number,msr_number);
 
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
