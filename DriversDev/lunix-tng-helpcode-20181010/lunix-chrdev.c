@@ -33,6 +33,8 @@
  */
 struct lunix_chrdev_sta
 struct lunix_sensor_struct* arrsensor[LUNIX_SENSOR_CNT];
+struct cdev lunix_chrdev_cdev;
+
 
 /*
  * Just a quick [unlocked] check to see if the cached
@@ -258,7 +260,6 @@ int lunix_chrdev_init(void)
 	int ret,i;
 	dev_t dev_no;
 	unsigned int lunix_minor_cnt = lunix_sensor_cnt << 3;
-	struct cdev lunix_chrdev_cdev;
 	debug("initializing character device\n");
 	cdev_init(&lunix_chrdev_cdev, &lunix_chrdev_fops);
 	lunix_chrdev_cdev.owner = THIS_MODULE;
