@@ -81,7 +81,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	debug("Spinlock off\n")
 
 	//metatropi pinakwn
-	long looked_up;
+	long int looked_up;
 	switch (state->type) {
 		case BATT: looked_up = lookup_voltage[data]; break;
 		case TEMP: looked_up = lookup_temperature[data]; break;
@@ -93,7 +93,6 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	size_t buf_size = 20;
 	state->buf_lim = snprintf(state->buf_data, buf_size, "%d.%d\n", int_part, dec_part);
 	return 1;
-	}
 
 //	memcpy(state->buf_data,sensor->msr_data[state->type]->values[state->type],buf_size);
 
@@ -120,6 +119,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	debug("leaving\n");
 	return 0;
 }
+
 
 /*************************************
  * Implementation of file operations
@@ -211,7 +211,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	printk("Data: %s\n", state->buf_data);
 
 	WARN_ON(!sensor);
-	int index,newmetr;
+	int index;
 	index = *f_pos - 1;
 	if(*f_pos==1)
 	{
