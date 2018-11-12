@@ -68,7 +68,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
 		//return 0;
 		//debug("leaving\n");
-	wait_event_interruptible(&sensor->wq,lunix_chrdev_state_needs_refresh(state) == 1);
+	wait_event_interruptible(sensor->wq,lunix_chrdev_state_needs_refresh(state) == 1);
 	size_t buf_size = 20;
 	memcpy(state->buf_data,sensor->msr_data[state->state_msr]->values[state->type],buf_size);
 	// sigoura irthan freska dedomena , ananeose ta kai ananeose tin ora
