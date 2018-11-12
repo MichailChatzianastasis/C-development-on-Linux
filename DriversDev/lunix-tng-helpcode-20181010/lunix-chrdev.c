@@ -265,8 +265,8 @@ int lunix_chrdev_init(void)
 	cdev_init(&lunix_chrdev_cdev, &lunix_chrdev_fops);
 	lunix_chrdev_cdev.owner = THIS_MODULE;
 	lunix_chrdev_cdev.ops= &lunix_chrdev_fops;
-	dev_no = MKDEV(LUNIX_CHRDEV_MAJOR, 0);
-	ret=register_chrdev_region(dev_no,16,"lunix_chrdev");
+	dev_no = MKDEV(0, 0);
+	ret=register_chrdev_region(dev_no,lunix_minor_cnt,"lunix");
 	/* ? */
 	/* register_chrdev_region? */
 	if (ret < 0) {
