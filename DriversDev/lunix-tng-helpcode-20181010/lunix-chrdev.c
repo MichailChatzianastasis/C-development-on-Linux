@@ -49,9 +49,13 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
 	WARN_ON ( !(sensor = state->sensor));
 	/* ? */
 	printk("eimai sthn need refesh pou ta skaei\n");
-	if(sensor->msr_data[state->state_msr]->last_update == state->buf_timestamp) return 0; /* ? */
+	if(sensor->msr_data[state->type]->last_update == state->buf_timestamp) return 0; /* ? */
 	/* The following return is bogus, just for the stub to compile */
-	else return 1;
+	else {
+		printk("New metrhsh\n");
+		return 1;
+	}
+
 }
 
 /*
@@ -73,6 +77,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	wait_event_interruptible(sensor->wq,lunix_chrdev_state_needs_refresh(state) == 1);
 	debug("Spinlock on\n");
 	spin_lock(&sensor->lock);
+	printk("Mesa sto spinlock\n");
 	// sigoura irthan freska dedomena , ananeose ta kai ananeose tin ora
 	// pairnoume grigora ta dedomena
 	state->buf_timestamp = sensor->msr_data[state->type]->last_update;
