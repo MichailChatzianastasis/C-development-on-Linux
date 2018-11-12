@@ -52,8 +52,8 @@ void initialize_state(struct lunix_chrdev_state_struct* state){
 
   state->state_snsr = state->minor_n/8;
   state->state_msr = state->minor_n%8;
-  if(state->state_msr%3==0) type = BATT;
-  else if(state->state_msr%3==1) type = TEMP;
+  if(state->state_msr%3==0) state->type = BATT;
+  else if(state->state_msr%3==1) state->type = TEMP;
   else type = LIGHT;
 
 }
