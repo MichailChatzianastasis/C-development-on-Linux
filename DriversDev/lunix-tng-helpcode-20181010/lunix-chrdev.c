@@ -49,7 +49,7 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
 	WARN_ON ( !(sensor = state->sensor));
 	/* ? */
 
-	if(sensor->msr_data[state->state_msr]->last_update == state->buf_timestamp) return 0; /* ? */
+	if(sensor->msr_data[state->type]->last_update == state->buf_timestamp) return 0; /* ? */
 	/* The following return is bogus, just for the stub to compile */
 	else return 1;
 }
@@ -69,13 +69,34 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
 		//return 0;
 		//debug("leaving\n");
+	uint32_t data;
 	wait_event_interruptible(sensor->wq,lunix_chrdev_state_needs_refresh(state) == 1);
-	size_t buf_size = 20;
-	memcpy(state->buf_data,sensor->msr_data[state->state_msr]->values[state->type],buf_size);
+	debug("Spinlock on\n");
+	spin_lock(&sensor->lock);
 	// sigoura irthan freska dedomena , ananeose ta kai ananeose tin ora
-	state->buf_timestamp = sensor->msr_data[state->state_msr]->last_update;
+	// pairnoume grigora ta dedomena
+	state->buf_timestamp = sensor->msr_data[state->type]->last_update;
+	data = sensor->msr_data[state->type]->values[0];
+	spin_unlock(&sensor->lock);
+	debug("Spinlock off\n")
+
+	//metatropi pinakwn
+	long looked_up;
+	switch (state->type) {
+		case BATT: looked_up = lookup_voltage[data]; break;
+		case TEMP: looked_up = lookup_temperature[data]; break;
+		case LIGHT: looked_up = lookup_light[data]; break;
+	}
+	int int_part = looked_up / 1000;
+	int dec_part = looked_up % 1000;
+
+	size_t buf_size = 20;
+	state->buf_lim = snprintf(state->buf_data, buf_size, "%d.%d\n", int_part, dec_part);
 	return 1;
-	//spinlock
+	}
+
+//	memcpy(state->buf_data,sensor->msr_data[state->type]->values[state->type],buf_size);
+
 	/*
 	 * Grab the raw data quickly, hold the
 	 * spinlock for as little as possible.
@@ -131,12 +152,6 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
 
-	/*struct cdev* new_lunix;
-	new_lunix= inode->i_cdev;
-	filp->private_data=new_lunix;*/
-
-
-
 	struct lunix_chrdev_state_struct* lunix_state;
 	lunix_state = kmalloc(sizeof(struct lunix_chrdev_state_struct),GFP_KERNEL);
 	lunix_state->minor_n = minor_n;
@@ -145,6 +160,9 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	filp->private_data = lunix_state;
 	lunix_state->buf_timestamp=0;
 	initialize_state(lunix_state);
+	sema_init(&lunix_state->lock, 1);
+	lunix_state->buf_lim = 1;
+	lunix_state->buf_data[0] = '\0';
 
 
 
@@ -185,14 +203,20 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	struct lunix_chrdev_state_struct *state;
 
 	state = filp->private_data;
-	WARN_ON(!state);
-
 	sensor = state->sensor;
+
+	WARN_ON(!state);
+	printk("Last Update Cache: %d\n", state->buf_timestamp);
+	printk("Last Update Sensor: %d\n", sensor->msr_data[state->type]->last_update);
+	printk("Data: %s\n", state->buf_data);
+
 	WARN_ON(!sensor);
 	int index,newmetr;
 	index = *f_pos - 1;
-	if(*f_pos==1) {
-			if(lunix_chrdev_state_update(state)==0) return 0;}
+	if(*f_pos==1)
+	{
+			lunix_chrdev_state_update(state);
+		}
 	if(*f_pos>=1 ){
 		if(*f_pos -1 + cnt >= buf_size) {
 			//exceeds
