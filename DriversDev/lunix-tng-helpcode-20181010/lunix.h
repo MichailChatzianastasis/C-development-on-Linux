@@ -13,7 +13,7 @@
 /* Compile-time parameters */
 #define LUNIX_VERSION_STRING	"0.1701-D"
 
-#ifdef __KERNEL__ 
+#ifdef __KERNEL__
 
 #include <linux/fs.h>
 #include <linux/tty.h>
@@ -69,8 +69,8 @@ extern struct lunix_protocol_state_struct lunix_protocol_state;
 /*
  * Function prototypes
  */
-int lunix_sensor_init(struct lunix_sensor_struct *);
-void lunix_sensor_destroy(struct lunix_sensor_struct *);
+int lunix_sensor_init(struct lunix_sensor_struct *s);
+void lunix_sensor_destroy(struct lunix_sensor_struct *s);
 void lunix_sensor_update(struct lunix_sensor_struct *s,
 	uint16_t batt, uint16_t temp, uint16_t light);
 
