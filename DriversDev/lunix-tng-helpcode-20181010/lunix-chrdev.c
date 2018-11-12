@@ -258,7 +258,7 @@ int lunix_chrdev_init(void)
 	int ret,i;
 	dev_t dev_no;
 	unsigned int lunix_minor_cnt = lunix_sensor_cnt << 3;
-	struct cdev* lunix_chrdev_cdev;
+	struct cdev lunix_chrdev_cdev;
 	debug("initializing character device\n");
 	cdev_init(&lunix_chrdev_cdev, &lunix_chrdev_fops);
 	lunix_chrdev_cdev.owner = THIS_MODULE;
@@ -292,11 +292,12 @@ out:
 
 void lunix_chrdev_destroy(void)
 {
+	int i;
 	dev_t dev_no;
 	struct lunix_sensor_struct* sensor;
 	unsigned int lunix_minor_cnt = lunix_sensor_cnt << 3;
 	for( i=0;i<LUNIX_SENSOR_CNT;i++){
-			sensor=arrsesnor[i];
+			sensor=arrsensor[i];
 			lunix_sensor_destroy(sensor);
 			kfree(sensor);
 
