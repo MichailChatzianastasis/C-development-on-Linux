@@ -48,8 +48,8 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
 
 	WARN_ON ( !(sensor = state->sensor));
 	/* ? */
-
-	if(sensor->msr_data[state->type]->last_update == state->buf_timestamp) return 0; /* ? */
+	printk("eimai sthn need refesh pou ta skaei\n");
+	if(sensor->msr_data[state->state_msr]->last_update == state->buf_timestamp) return 0; /* ? */
 	/* The following return is bogus, just for the stub to compile */
 	else return 1;
 }
@@ -64,7 +64,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	struct lunix_sensor_struct *sensor;
 	sensor=state->sensor;
 
-
+	printk("EIMai sthn update\n");
 	//spinlocks
 
 		//return 0;
@@ -156,7 +156,7 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	lunix_state = kmalloc(sizeof(struct lunix_chrdev_state_struct),GFP_KERNEL);
 	lunix_state->minor_n = minor_n;
 	//lunix_state->f_pos = kmalloc(sizeof(loff_t),GFP_KERNEL);
-  filp->f_pos =1 ;
+  	filp->f_pos =1 ;
 	filp->private_data = lunix_state;
 	lunix_state->buf_timestamp=0;
 	initialize_state(lunix_state);
@@ -206,9 +206,10 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	sensor = state->sensor;
 
 	WARN_ON(!state);
-	printk("Last Update Cache: %d\n", state->buf_timestamp);
-	printk("Last Update Sensor: %d\n", sensor->msr_data[state->type]->last_update);
-	printk("Data: %s\n", state->buf_data);
+	printk("MPHKA STH READ RE\n");
+//	printk("Last Update Cache: %d\n", state->buf_timestamp);
+	//printk("Last Update Sensor: %d\n", sensor->msr_data[state->type]->last_update);
+	//printk("Data: %s\n", state->buf_data);
 
 	WARN_ON(!sensor);
 	int index;
@@ -216,6 +217,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	if(*f_pos==1)
 	{
 			lunix_chrdev_state_update(state);
+			printk("prwth try\n");
 		}
 	if(*f_pos>=1 ){
 		if(*f_pos -1 + cnt >= buf_size) {
@@ -223,12 +225,14 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 			//have to return cnt buf_size - (*f_pos -1) bytes
 			if(copy_to_user(usrbuf,&(state->buf_data[index]),buf_size -(*f_pos-1))!=0) return -EFAULT;
 			*f_pos=1;
+			printk("deutero try\n");
 			return (buf_size-index);
 		}
 		else{
 		// have to return cnt bytes to user
 		if(copy_to_user(usrbuf,&(state->buf_data[index]),cnt)!=0) return -EFAULT;
 		*f_pos = *f_pos + cnt;
+		printk("trito try\n");
 		return cnt;
 	}
 	}
@@ -297,6 +301,7 @@ int lunix_chrdev_init(void)
 	dev_t dev_no;
 	unsigned int lunix_minor_cnt = lunix_sensor_cnt << 3;
 	debug("initializing character device\n");
+	debug("I am in \n");
 	cdev_init(&lunix_chrdev_cdev, &lunix_chrdev_fops);
 	lunix_chrdev_cdev.owner = THIS_MODULE;
 	lunix_chrdev_cdev.ops= &lunix_chrdev_fops;
@@ -311,7 +316,7 @@ int lunix_chrdev_init(void)
 	/* ? */
 	/* cdev_add? */
 
-	int i, j;
+	int j;
 		for (i = 0; i < lunix_sensor_cnt; i++) {
 			for (j = 0; j < 3; j++) {
 				int minor = i * 8 + j;
@@ -331,7 +336,6 @@ int lunix_chrdev_init(void)
 	return 0;
 
 out_with_chrdev_region:
-ret=cdev_add(&lunix_chrdev_cdev,dev_no,16);
 	unregister_chrdev_region(dev_no, lunix_minor_cnt);
 out:
 	return ret;

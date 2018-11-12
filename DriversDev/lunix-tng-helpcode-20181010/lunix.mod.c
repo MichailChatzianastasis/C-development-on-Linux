@@ -52,6 +52,7 @@ __attribute__((section("__versions"))) = {
 	{ 0x2207a57f, __VMLINUX_SYMBOL_STR(prepare_to_wait_event) },
 	{ 0x37a0cba, __VMLINUX_SYMBOL_STR(kfree) },
 	{ 0xf08242c2, __VMLINUX_SYMBOL_STR(finish_wait) },
+	{ 0x28318305, __VMLINUX_SYMBOL_STR(snprintf) },
 	{ 0x67b53fbc, __VMLINUX_SYMBOL_STR(tty_register_ldisc) },
 	{ 0x88db9f48, __VMLINUX_SYMBOL_STR(__check_object_size) },
 };
