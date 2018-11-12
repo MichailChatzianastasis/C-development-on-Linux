@@ -78,10 +78,10 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	state->buf_timestamp = sensor->msr_data[state->type]->last_update;
 	data = sensor->msr_data[state->type]->values[0];
 	spin_unlock(&sensor->lock);
-	debug("Spinlock off\n")
+	debug("Spinlock off\n");
 
 	//metatropi pinakwn
-	long int looked_up;
+	long  looked_up;
 	switch (state->type) {
 		case BATT: looked_up = lookup_voltage[data]; break;
 		case TEMP: looked_up = lookup_temperature[data]; break;
