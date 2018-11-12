@@ -24,6 +24,7 @@
 #include <linux/vmalloc.h>
 #include <linux/spinlock.h>
 
+
 #include "lunix.h"
 #include "lunix-chrdev.h"
 #include "lunix-lookup.h"
@@ -31,7 +32,7 @@
 /*
  * Global data
  */
-struct lunix_chrdev_sta
+struct lunix_chrdev_sta;
 struct lunix_sensor_struct* arrsensor[LUNIX_SENSOR_CNT];
 struct cdev lunix_chrdev_cdev;
 
