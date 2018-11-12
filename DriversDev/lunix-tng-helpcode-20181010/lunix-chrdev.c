@@ -275,6 +275,17 @@ static struct file_operations lunix_chrdev_fops =
 	.mmap           = lunix_chrdev_mmap
 };
 
+static void lunix_setup_cdev (struct cdev *dev, int index) {
+	int err, devno = MKDEV(LUNIX_CHRDEV_MAJOR, index);
+	cdev_init(dev, &lunix_chrdev_fops);
+	(*dev).owner = THIS_MODULE;
+	(*dev).ops = &lunix_chrdev_fops;
+	err = cdev_add(dev, devno, 1);
+	if (err)
+		printk(KERN_NOTICE "Error %d adding lunix%d", err, index);
+}
+
+
 int lunix_chrdev_init(void)
 {
 	/*
@@ -299,10 +310,19 @@ int lunix_chrdev_init(void)
 	}
 	/* ? */
 	/* cdev_add? */
-	ret=cdev_add(&lunix_chrdev_cdev,dev_no,16);
-	if (ret < 0) {
-		debug("failed to add character device\n");
-		goto out_with_chrdev_region;
+
+	int i, j;
+		for (i = 0; i < lunix_sensor_cnt; i++) {
+			for (j = 0; j < 3; j++) {
+				int minor = i * 8 + j;
+				debug("Registered cdev with minor: %d\n", minor);
+				lunix_setup_cdev(&lunix_chrdev_cdev, minor);
+			}
+		}
+
+		if (ret < 0) {
+			debug("failed to add character device\n");
+			goto out_with_chrdev_region;
 	}
 	for (i=0;i<lunix_sensor_cnt;i++){
 		arrsensor[i]=NULL;
@@ -311,6 +331,7 @@ int lunix_chrdev_init(void)
 	return 0;
 
 out_with_chrdev_region:
+ret=cdev_add(&lunix_chrdev_cdev,dev_no,16);
 	unregister_chrdev_region(dev_no, lunix_minor_cnt);
 out:
 	return ret;
