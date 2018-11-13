@@ -1,4 +1,5 @@
 /*
+
  * lunix-chrdev.c
  *
  * Implementation of character devices
@@ -48,8 +49,10 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
 
 	WARN_ON ( !(sensor = state->sensor));
 	/* ? */
-	printk("eimai sthn need refesh pou ta skaei\n");
-	if(sensor->msr_data[state->type]->last_update == state->buf_timestamp) return 0; /* ? */
+	sensor=state->sensor;
+	printk("prwto mhnuma %d\n",state->buf_timestamp);
+	printk("deteuro\n");
+	if(sensor->msr_data[state->type]->last_update == state->buf_timestamp) {printk("mphka sthn if\n"); return 0;} /* ? */
 	/* The following return is bogus, just for the stub to compile */
 	else {
 		printk("New metrhsh\n");
@@ -67,14 +70,17 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 {
 	struct lunix_sensor_struct *sensor;
 	sensor=state->sensor;
-
+	int ret;
 	printk("EIMai sthn update\n");
 	//spinlocks
 
 		//return 0;
 		//debug("leaving\n");
 	uint32_t data;
-	wait_event_interruptible(sensor->wq,lunix_chrdev_state_needs_refresh(state) == 1);
+	if (wait_event_interruptible(sensor->wq, lunix_chrdev_state_needs_refresh(state))) {
+            ret = -ERESTARTSYS;
+            goto out;
+        }	
 	debug("Spinlock on\n");
 	spin_lock(&sensor->lock);
 	printk("Mesa sto spinlock\n");
@@ -96,7 +102,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	int dec_part = looked_up % 1000;
 
 	size_t buf_size = 20;
-	state->buf_lim = snprintf(state->buf_data, buf_size, "%d.%d\n", int_part, dec_part);
+	state->buf_lim = snprintf(state->buf_data, buf_size, "%d.%d\n\n", int_part, dec_part);
 	return 1;
 
 //	memcpy(state->buf_data,sensor->msr_data[state->type]->values[state->type],buf_size);
@@ -120,9 +126,9 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	 */
 
 	/* ? */
-
+out:
 	debug("leaving\n");
-	return 0;
+	return ret;
 }
 
 
@@ -149,10 +155,15 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	 minor_n = MINOR(inode-> i_rdev);
 	 int sensor_number = minor_n / 8;
 	 struct lunix_sensor_struct* sensor;
-	 if(arrsensor[sensor_number]==NULL){
-		 sensor=kmalloc(sizeof(struct lunix_sensor_struct),GFP_KERNEL);
-		 arrsensor[sensor_number] = sensor;
-	 }
+	// if(arrsensor[sensor_number]==NULL){
+		// sensor=kmalloc(sizeof(struct lunix_sensor_struct),GFP_KERNEL);
+		sensor=&lunix_sensors[sensor_number];
+		 lunix_sensor_init(sensor);
+		 sensor->msr_data[BATT]->last_update=0;
+		 sensor->msr_data[LIGHT]->last_update=0;
+		 sensor->msr_data[TEMP]->last_update=0;
+		// arrsensor[sensor_number] = sensor;
+	// }
 
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
@@ -164,13 +175,13 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
   	filp->f_pos =1 ;
 	filp->private_data = lunix_state;
 	lunix_state->buf_timestamp=0;
-	initialize_state(lunix_state);
+	initialize_state2(lunix_state);
 	sema_init(&lunix_state->lock, 1);
 	lunix_state->buf_lim = 1;
 	lunix_state->buf_data[0] = '\0';
-
-
-
+	//lunix_state->sensor=arrsensor[sensor_number];
+//	printk("%d\n",arrsensor[sensor_number]);
+	lunix_state->sensor=sensor;
 out:
 	debug("leaving, with ret = %d\n", ret);
 	return ret;
@@ -200,7 +211,7 @@ static long lunix_chrdev_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 
 
 static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t cnt, loff_t *f_pos)
-{
+{	
 	ssize_t ret;
 	int buf_size = 20;
 
@@ -209,7 +220,6 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 	state = filp->private_data;
 	sensor = state->sensor;
-
 	WARN_ON(!state);
 	printk("MPHKA STH READ RE\n");
 //	printk("Last Update Cache: %d\n", state->buf_timestamp);
@@ -217,13 +227,18 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	//printk("Data: %s\n", state->buf_data);
 
 	WARN_ON(!sensor);
+	if (down_interruptible(&state->lock)) {
+        	debug("Could not acquire lock\n");
+        	return -ERESTARTSYS;
+    	}
 	int index;
 	index = *f_pos - 1;
 	if(*f_pos==1)
 	{
 			lunix_chrdev_state_update(state);
-			printk("prwth try\n");
+			printk("prwto try\n");
 		}
+	buf_size = state->buf_lim;
 	if(*f_pos>=1 ){
 		if(*f_pos -1 + cnt >= buf_size) {
 			//exceeds
@@ -231,15 +246,17 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 			if(copy_to_user(usrbuf,&(state->buf_data[index]),buf_size -(*f_pos-1))!=0) return -EFAULT;
 			*f_pos=1;
 			printk("deutero try\n");
+			up(&state->lock);
 			return (buf_size-index);
 		}
-		else{
+		else {
 		// have to return cnt bytes to user
-		if(copy_to_user(usrbuf,&(state->buf_data[index]),cnt)!=0) return -EFAULT;
-		*f_pos = *f_pos + cnt;
-		printk("trito try\n");
-		return cnt;
-	}
+			if(copy_to_user(usrbuf,&(state->buf_data[index]),cnt)!=0) return -EFAULT;
+			*f_pos = *f_pos + cnt;
+			printk("trito try\n");
+			up(&state->lock);
+			return cnt;
+		}
 	}
 
 	/* Lock? */
@@ -248,13 +265,13 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	 * updated by actual sensor data (i.e. we need to report
 	 * on a "fresh" measurement, do so
 	 */
-	if (*f_pos == 0) {
-		while (lunix_chrdev_state_update(state) == -EAGAIN) {
+//	if (*f_pos == 0) {
+	//	while (lunix_chrdev_state_update(state) == -EAGAIN) {
 			/* ? */
 			/* The process needs to sleep */
 			/* See LDD3, page 153 for a hint */
-		}
-	}
+//		}
+//	}
 
 	/* End of file */
 	/* ? */
@@ -266,6 +283,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	/* ? */
 out:
 	/* Unlock? */
+	up(&state->lock);
 	return ret;
 }
 
@@ -334,9 +352,9 @@ int lunix_chrdev_init(void)
 			debug("failed to add character device\n");
 			goto out_with_chrdev_region;
 	}
-	for (i=0;i<lunix_sensor_cnt;i++){
-		arrsensor[i]=NULL;
-	}
+	//for (i=0;i<lunix_sensor_cnt;i++){
+	//	arrsensor[i]=NULL;
+	//}
 	debug("completed successfully\n");
 	return 0;
 
@@ -352,13 +370,6 @@ void lunix_chrdev_destroy(void)
 	dev_t dev_no;
 	struct lunix_sensor_struct* sensor;
 	unsigned int lunix_minor_cnt = lunix_sensor_cnt << 3;
-	for( i=0;i<LUNIX_SENSOR_CNT;i++){
-			sensor=arrsensor[i];
-			lunix_sensor_destroy(sensor);
-			kfree(sensor);
-
-	}
-
 	debug("entering\n");
 	dev_no = MKDEV(LUNIX_CHRDEV_MAJOR, 0);
 	cdev_del(&lunix_chrdev_cdev);

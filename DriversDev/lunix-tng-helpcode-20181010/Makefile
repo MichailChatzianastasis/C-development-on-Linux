@@ -11,7 +11,7 @@
 CC = gcc
 
 # Remove comment to enable verbose output from the kernel build system
-KERNEL_VERBOSE = 'V=1'
+#KERNEL_VERBOSE = 'V=1'
 DEBUG = y
 
 # Add your debugging flag (or not) to CFLAGS

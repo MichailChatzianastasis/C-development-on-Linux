@@ -61,7 +61,7 @@ static void lunix_protocol_update_sensors(struct lunix_protocol_state_struct *st
 	uint16_t light;
 	uint16_t nodeid;
 
-	//debug("WHOLE PACKET\n");
+	debug("WHOLE PACKET\n");
 
 	if (0x0B == state->packet[PACKET_SIGNATURE_OFFSET])
 	{

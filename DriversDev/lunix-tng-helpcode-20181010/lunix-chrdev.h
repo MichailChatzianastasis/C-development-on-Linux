@@ -47,7 +47,7 @@ struct lunix_chrdev_state_struct {
 	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
 	 */
 };
-void initialize_state(struct lunix_chrdev_state_struct* state){
+static void initialize_state2(struct lunix_chrdev_state_struct* state){
 
 
   state->state_snsr = state->minor_n/8;
