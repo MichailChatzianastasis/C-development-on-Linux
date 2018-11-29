@@ -77,10 +77,12 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 		//return 0;
 		//debug("leaving\n");
 	uint32_t data;
+	up(&state->lock);
 	if (wait_event_interruptible(sensor->wq, lunix_chrdev_state_needs_refresh(state))) {
             ret = -ERESTARTSYS;
             goto out;
         }	
+	down_interruptible(&state->lock);
 	debug("Spinlock on\n");
 	spin_lock(&sensor->lock);
 	printk("Mesa sto spinlock\n");
@@ -155,16 +157,12 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	 minor_n = MINOR(inode-> i_rdev);
 	 int sensor_number = minor_n / 8;
 	 struct lunix_sensor_struct* sensor;
-	// if(arrsensor[sensor_number]==NULL){
-		// sensor=kmalloc(sizeof(struct lunix_sensor_struct),GFP_KERNEL);
 		sensor=&lunix_sensors[sensor_number];
-		 lunix_sensor_init(sensor);
+	/*	 lunix_sensor_init(sensor);
 		 sensor->msr_data[BATT]->last_update=0;
 		 sensor->msr_data[LIGHT]->last_update=0;
 		 sensor->msr_data[TEMP]->last_update=0;
-		// arrsensor[sensor_number] = sensor;
-	// }
-
+*/
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
 
@@ -179,8 +177,6 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	sema_init(&lunix_state->lock, 1);
 	lunix_state->buf_lim = 1;
 	lunix_state->buf_data[0] = '\0';
-	//lunix_state->sensor=arrsensor[sensor_number];
-//	printk("%d\n",arrsensor[sensor_number]);
 	lunix_state->sensor=sensor;
 out:
 	debug("leaving, with ret = %d\n", ret);
