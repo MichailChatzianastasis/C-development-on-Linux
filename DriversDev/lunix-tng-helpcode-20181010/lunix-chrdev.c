@@ -77,10 +77,15 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 		//return 0;
 		//debug("leaving\n");
 	uint32_t data;
+	up(&state->lock);
 	if (wait_event_interruptible(sensor->wq, lunix_chrdev_state_needs_refresh(state))) {
             ret = -ERESTARTSYS;
             goto out;
         }	
+	if (down_interruptible(&state->lock)) {
+        	debug("Could not acquire lock\n");
+        	return -ERESTARTSYS;
+    	}
 	debug("Spinlock on\n");
 	spin_lock(&sensor->lock);
 	printk("Mesa sto spinlock\n");
