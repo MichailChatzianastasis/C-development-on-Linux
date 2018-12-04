@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
 
 			/* Read answer and write it to standard output */
 			if(FD_ISSET(sd,&rfds) ) {
+        printf("client: hrthan data\n");
 
 				n = read(sd, buf, sizeof(buf));
 
