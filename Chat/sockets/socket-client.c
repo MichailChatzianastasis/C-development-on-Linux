@@ -123,7 +123,31 @@ int main(int argc, char *argv[])
 		fflush(stdin);
 		sel_ret = select(sd + 1,&rfds,NULL,NULL,NULL);
 		if(sel_ret == -1 ) perror("select error");
-		if(FD_ISSET(0,&rfds) ) {
+    /*
+    * Let the remote know we're not going to write anything else.
+    * Try removing the shutdown() call and see what happens.
+    */
+
+    /* Read answer and write it to standard output */
+    if(FD_ISSET(sd,&rfds) ) {
+
+      n = read(sd, buf, sizeof(buf));
+
+      if (n < 0) {
+        perror("read");
+        exit(1);
+      }
+
+      if (n <= 0) break;
+      fprintf(stdout, "Remote says:\n");
+      if (insist_write(0, buf, n) != n) {
+        perror("write");
+        exit(1);
+      }
+      printf("\n" );
+
+    }
+		else if(FD_ISSET(0,&rfds) ) {
 
 
 			getLine(0,buf,sizeof(buf));
@@ -136,34 +160,13 @@ int main(int argc, char *argv[])
 				perror("write");
 				exit(1);
 			}
-			fprintf(stdout, "I said:\n%s\nRemote says:\n", buf);
+			fprintf(stdout, "I said:\n%s\n", buf);
 			fflush(stdout);
+      fflush(stdin);
+
 		}
 
-			/*
-			 * Let the remote know we're not going to write anything else.
-			 * Try removing the shutdown() call and see what happens.
-			 */
-
-			/* Read answer and write it to standard output */
-			if(FD_ISSET(sd,&rfds) ) {
-
-				n = read(sd, buf, sizeof(buf));
-
-				if (n < 0) {
-					perror("read");
-					exit(1);
-				}
-
-				if (n <= 0)
-					break;
-
-				if (insist_write(0, buf, n) != n) {
-					perror("write");
-					exit(1);
-				}
-		}
-printf("\n");
+//  printf("\n");
 }
 if (shutdown(sd, SHUT_WR) < 0) {
 	perror("shutdown");
