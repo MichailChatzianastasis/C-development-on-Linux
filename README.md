@@ -2,9 +2,6 @@
 
 <h1>  Low level programming in language c for the course Operating System in National Technical University of Athens. </h1>
 
-
-<h2> Assigment 1: Merging_two_files_into_a_third. </h2> 
- Using input-output system calls and handling files in C.<br>
  
  <div>
  
