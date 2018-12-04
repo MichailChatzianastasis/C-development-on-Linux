@@ -75,6 +75,8 @@ ssize_t insist_write(int fd, const void *buf, size_t cnt)
 
 int main(int argc, char *argv[])
 {
+	fd_set rfds;
+	FD_ZERO(&rfds);
 	int sd, port;
 	ssize_t n;
 	char buf[100];
@@ -114,44 +116,63 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Connected.\n");
 
 	/* Be careful with buffer overruns, ensure NUL-termination */
-	getLine(0,buf,sizeof(buf));
-	//strncpy(buf, HELLO_THERE, sizeof(buf));
-	buf[sizeof(buf) - 1] = '\0';
+	int sel_ret;
+	while(1) {
+		FD_SET(0,&rfds);
+		FD_SET(sd,&rfds);
+		if (	FD_ISSET(0,&rfds)	) printf("ready keyboard\n");
+		if(	FD_ISSET(sd,&rfds) ) printf("ready sd\n");
+		fflush(stdin);
+		sel_ret = select(2,&rfds,NULL,NULL,NULL);
+		if(sel_ret == -1 ) perror("select error");
+		printf("client:bghka apo th select me sel_ret=%d\n",sel_ret);
+		if(FD_ISSET(0,&rfds) ) {
+			printf("client:diabasa apo socket\n");
 
-	/* Say something... */
-	if (insist_write(sd, buf, strlen(buf)) != strlen(buf)) {
-		perror("write");
-		exit(1);
-	}
-	fprintf(stdout, "I said:\n%s\nRemote says:\n", buf);
-	fflush(stdout);
 
-	/*
-	 * Let the remote know we're not going to write anything else.
-	 * Try removing the shutdown() call and see what happens.
-	 */
-	if (shutdown(sd, SHUT_WR) < 0) {
-		perror("shutdown");
-		exit(1);
-	}
+			getLine(0,buf,sizeof(buf));
+			printf("\033[A\33[2K\r");
+		 	//strncpy(buf, HELLO_THERE, sizeof(buf));
+			buf[sizeof(buf) - 1] = '\0';
 
-	/* Read answer and write it to standard output */
-	for (;;) {
-		n = read(sd, buf, sizeof(buf));
-
-		if (n < 0) {
-			perror("read");
-			exit(1);
+			/* Say something... */
+			if (insist_write(sd, buf, strlen(buf)) != strlen(buf)) {
+				perror("write");
+				exit(1);
+			}
+			fprintf(stdout, "I said:\n%s\nRemote says:\n", buf);
+			fflush(stdout);
 		}
 
-		if (n <= 0)
-			break;
+			/*
+			 * Let the remote know we're not going to write anything else.
+			 * Try removing the shutdown() call and see what happens.
+			 */
 
-		if (insist_write(0, buf, n) != n) {
-			perror("write");
-			exit(1);
+			/* Read answer and write it to standard output */
+			if(FD_ISSET(sd,&rfds) ) {
+
+				n = read(sd, buf, sizeof(buf));
+
+				if (n < 0) {
+					perror("read");
+					exit(1);
+				}
+
+				if (n <= 0)
+					break;
+
+				if (insist_write(0, buf, n) != n) {
+					perror("write");
+					exit(1);
+				}
 		}
-	}
+printf("\n");
+}
+if (shutdown(sd, SHUT_WR) < 0) {
+	perror("shutdown");
+	exit(1);
+}
 
 	fprintf(stderr, "\nDone.\n");
 	return 0;

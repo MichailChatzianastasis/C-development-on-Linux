@@ -14,6 +14,10 @@
 #include <unistd.h>
 #include <netdb.h>
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/select.h>
+
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -22,6 +26,37 @@
 #include <netinet/in.h>
 
 #include "socket-common.h"
+
+#define OK       0
+#define NO_INPUT 1
+#define TOO_LONG 2
+static int getLine (char *prmpt, char *buff, size_t sz) {
+    int ch, extra;
+
+    // Get line with buffer overrun protection.
+    if (prmpt != NULL) {
+        printf ("%s", prmpt);
+        fflush (stdout);
+    }
+    if (fgets (buff, sz, stdin) == NULL)
+        return NO_INPUT;
+
+    // If it was too long, there'll be no newline. In that case, we flush
+    // to end of line so that excess doesn't affect the next call.
+    if (buff[strlen(buff)-1] != '\n') {
+        extra = 0;
+        while (((ch = getchar()) != '\n') && (ch != EOF))
+            extra = 1;
+        return (extra == 1) ? TOO_LONG : OK;
+    }
+
+    // Otherwise remove newline and give string back to caller.
+    buff[strlen(buff)-1] = '\0';
+    return OK;
+}
+
+
+
 
 /* Convert a buffer to upercase */
 void toupper_buf(char *buf, size_t n)
@@ -37,7 +72,7 @@ ssize_t insist_write(int fd, const void *buf, size_t cnt)
 {
 	ssize_t ret;
 	size_t orig_cnt = cnt;
-	
+
 	while (cnt > 0) {
 	        ret = write(fd, buf, cnt);
 	        if (ret < 0)
@@ -51,13 +86,15 @@ ssize_t insist_write(int fd, const void *buf, size_t cnt)
 
 int main(void)
 {
+	fd_set rfds;
+	FD_ZERO(&rfds);
 	char buf[100];
 	char addrstr[INET_ADDRSTRLEN];
-	int sd, newsd;
+	int sd, newsd,sel_ret;
 	ssize_t n;
 	socklen_t len;
 	struct sockaddr_in sa;
-	
+
 	/* Make sure a broken connection doesn't kill us */
 	signal(SIGPIPE, SIG_IGN);
 
@@ -100,10 +137,21 @@ int main(void)
 			exit(1);
 		}
 		fprintf(stderr, "Incoming connection from %s:%d\n",
+
 			addrstr, ntohs(sa.sin_port));
 
 		/* We break out of the loop when the remote peer goes away */
 		for (;;) {
+			FD_SET(0,&rfds);
+			FD_SET(sd,&rfds);
+			if (	FD_ISSET(0,&rfds)	) printf("ready keyboard\n");
+			if(	FD_ISSET(sd,&rfds) ) printf("ready sd\n");
+			fflush(stdin);
+			sel_ret = select(2,&rfds,NULL,NULL,NULL);
+			if(sel_ret == -1 ) perror("select error");
+			printf("server:bghka apo th select me sel_ret=%d\n",sel_ret);
+			if(FD_ISSET(sd,&rfds) ) {
+				printf("server:diabasa apo socket\n");
 			n = read(newsd, buf, sizeof(buf));
 			if (n <= 0) {
 				if (n < 0)
@@ -112,13 +160,29 @@ int main(void)
 					fprintf(stderr, "Peer went away\n");
 				break;
 			}
-			toupper_buf(buf, n);
-			if (insist_write(newsd, buf, n) != n) {
+			fprintf(stdout, "Remote says:\n");
+			write(1,buf,n);
+			printf("\n");}
+			else if (FD_ISSET(0,&rfds)){
+
+			// ALLIOS TREXE GETLINE
+			getLine(0,buf,sizeof(buf));
+			printf("\033[A\33[2K\r");
+			printf("server:diabasa apo stdin\n");
+
+			//toupper_buf(buf, n);
+			buf[sizeof(buf) - 1] = '\0';
+
+			if (insist_write(newsd, buf, strlen(buf)) != strlen(buf)) {
 				perror("write to remote peer failed");
 				break;
 			}
+			fprintf(stdout, "I said:\n%s\n", buf);
+			fflush(stdout);
+			fflush(stdin);
+
 		}
-		/* Make sure we don't leak open files */
+	}		/* Make sure we don't leak open files */
 		if (close(newsd) < 0)
 			perror("close");
 	}
@@ -126,4 +190,3 @@ int main(void)
 	/* This will never happen */
 	return 1;
 }
-
