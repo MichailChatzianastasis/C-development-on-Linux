@@ -30,6 +30,7 @@
 #define OK       0
 #define NO_INPUT 1
 #define TOO_LONG 2
+int sd, newsd=-1;
 static int getLine (char *prmpt, char *buff, size_t sz) {
     int ch, extra;
 
@@ -84,13 +85,25 @@ ssize_t insist_write(int fd, const void *buf, size_t cnt)
 	return orig_cnt;
 }
 
+void intHandler(int signal_to_be_handled){
+  printf("\nWelcome to signal handler,exited with SIGINT\n");
+  if (newsd != -1){
+    shutdown(newsd,SHUT_WR);
+    close(newsd);
+  }
+  shutdown(sd,SHUT_WR);
+  close(sd);
+  exit(0);
+}
+
 int main(void)
 {
+  signal(SIGINT,intHandler);
 	fd_set rfds;
 	FD_ZERO(&rfds);
 	char buf[100];
 	char addrstr[INET_ADDRSTRLEN];
-	int sd, newsd,sel_ret;
+	int sel_ret;
 	ssize_t n;
 	socklen_t len;
 	struct sockaddr_in sa;
@@ -143,48 +156,45 @@ int main(void)
 		/* We break out of the loop when the remote peer goes away */
 		for (;;) {
 			FD_SET(0,&rfds);
-			FD_SET(sd,&rfds);
-			if (	FD_ISSET(0,&rfds)	) printf("ready keyboard\n");
-			if(	FD_ISSET(sd,&rfds) ) printf("ready sd\n");
+			FD_SET(newsd,&rfds);
 			fflush(stdin);
-			sel_ret = select(2,&rfds,NULL,NULL,NULL);
+			sel_ret = select(newsd + 1,&rfds,NULL,NULL,NULL);
 			if(sel_ret == -1 ) perror("select error");
-			printf("server:bghka apo th select me sel_ret=%d\n",sel_ret);
-			if(FD_ISSET(sd,&rfds) ) {
-				printf("server:diabasa apo socket\n");
-			n = read(newsd, buf, sizeof(buf));
-			if (n <= 0) {
-				if (n < 0)
-					perror("read from remote peer failed");
-				else
-					fprintf(stderr, "Peer went away\n");
-				break;
-			}
-			fprintf(stdout, "Remote says:\n");
-			write(1,buf,n);
-			printf("\n");}
+			if(FD_ISSET(newsd,&rfds) ) {
+  			n = read(newsd, buf, sizeof(buf));
+  			if (n <= 0) {
+  				if (n < 0)
+  					perror("read from remote peer failed");
+  				else{
+  					fprintf(stderr, "Peer went away\n");
+            /* Make sure we don't leak open files */
+            if (close(newsd) < 0)
+            perror("close");
+  				  break;
+        }
+  			}
+  			fprintf(stdout, "Remote says:\n");
+  			write(1,buf,n);
+  			printf("\n");
+    }
 			else if (FD_ISSET(0,&rfds)){
 
-			// ALLIOS TREXE GETLINE
-			getLine(0,buf,sizeof(buf));
-			printf("\033[A\33[2K\r");
-			printf("server:diabasa apo stdin\n");
+  			// ALLIOS TREXE GETLINE
+  			getLine(0,buf,sizeof(buf));
+  			printf("\033[A\33[2K\r");
+  			//toupper_buf(buf, n);
+  			buf[sizeof(buf) - 1] = '\0';
 
-			//toupper_buf(buf, n);
-			buf[sizeof(buf) - 1] = '\0';
-
-			if (insist_write(newsd, buf, strlen(buf)) != strlen(buf)) {
-				perror("write to remote peer failed");
-				break;
-			}
-			fprintf(stdout, "I said:\n%s\n", buf);
-			fflush(stdout);
-			fflush(stdin);
+  			if (insist_write(newsd, buf, strlen(buf)) != strlen(buf)) {
+  				perror("write to remote peer failed");
+  				break;
+  			}
+  			fprintf(stdout, "I said:\n%s\n", buf);
+  			fflush(stdout);
+  			fflush(stdin);
 
 		}
-	}		/* Make sure we don't leak open files */
-		if (close(newsd) < 0)
-			perror("close");
+	}
 	}
 
 	/* This will never happen */

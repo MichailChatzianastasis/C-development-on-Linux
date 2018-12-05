@@ -120,14 +120,10 @@ int main(int argc, char *argv[])
 	while(1) {
 		FD_SET(0,&rfds);
 		FD_SET(sd,&rfds);
-		if (	FD_ISSET(0,&rfds)	) printf("ready keyboard\n");
-		if(	FD_ISSET(sd,&rfds) ) printf("ready sd\n");
 		fflush(stdin);
-		sel_ret = select(2,&rfds,NULL,NULL,NULL);
+		sel_ret = select(sd + 1,&rfds,NULL,NULL,NULL);
 		if(sel_ret == -1 ) perror("select error");
-		printf("client:bghka apo th select me sel_ret=%d\n",sel_ret);
 		if(FD_ISSET(0,&rfds) ) {
-			printf("client:diabasa apo socket\n");
 
 
 			getLine(0,buf,sizeof(buf));
@@ -151,7 +147,6 @@ int main(int argc, char *argv[])
 
 			/* Read answer and write it to standard output */
 			if(FD_ISSET(sd,&rfds) ) {
-        printf("client: hrthan data\n");
 
 				n = read(sd, buf, sizeof(buf));
 
