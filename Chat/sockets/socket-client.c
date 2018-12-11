@@ -23,6 +23,7 @@
 
 #include "socket-common.h"
 
+#include "crypto-test.h"
 
 #define OK       0
 #define NO_INPUT 1
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
 	FD_ZERO(&rfds);
 	int sd, port;
 	ssize_t n;
-	char buf[100];
+	char buf[256];
 	char *hostname;
 	struct hostent *hp;
 	struct sockaddr_in sa;
@@ -114,10 +115,19 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	fprintf(stderr, "Connected.\n");
+	int fd;
+        fd = open("/dev/crypto", O_RDWR);
+        if (fd < 0) {
+                perror("open(/dev/crypto)");
+                return 1;
+        }
+	init_crypto(fd);
+        
 
 	/* Be careful with buffer overruns, ensure NUL-termination */
 	int sel_ret;
 	while(1) {
+		
 		FD_SET(0,&rfds);
 		FD_SET(sd,&rfds);
 		fflush(stdin);
@@ -139,6 +149,7 @@ int main(int argc, char *argv[])
       }
 
       if (n <= 0) break;
+      decrypt(fd,buf);
       fprintf(stdout, "Remote says:\n");
       if (insist_write(0, buf, n) != n) {
         perror("write");
@@ -149,25 +160,29 @@ int main(int argc, char *argv[])
     }
 		else if(FD_ISSET(0,&rfds) ) {
 
-
+			
 			getLine(0,buf,sizeof(buf));
+			char original_buf[256] ;
 			printf("\033[A\33[2K\r");
 		 	//strncpy(buf, HELLO_THERE, sizeof(buf));
-			buf[sizeof(buf) - 1] = '\0';
-
+			buf[sizeof(buf)-1] = '\0';
+			memcpy(original_buf,buf,strlen(buf));
+			encrypt(fd,buf);
 			/* Say something... */
 			if (insist_write(sd, buf, strlen(buf)) != strlen(buf)) {
 				perror("write");
 				exit(1);
 			}
-			fprintf(stdout, "I said:\n%s\n", buf);
+			fprintf(stdout, "I said:\n%s\n", original_buf);
 			fflush(stdout);
       fflush(stdin);
 
 		}
 
-//  printf("\n");
 }
+
+finishcrypto(fd);
+
 if (shutdown(sd, SHUT_WR) < 0) {
 	perror("shutdown");
 	exit(1);

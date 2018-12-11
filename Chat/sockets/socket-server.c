@@ -24,7 +24,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
+#include "crypto-test.h"
 #include "socket-common.h"
 
 #define OK       0
@@ -134,6 +134,13 @@ int main(void)
 		perror("listen");
 		exit(1);
 	}
+	int fd;
+        fd = open("/dev/crypto", O_RDWR);
+        if (fd < 0) {
+                perror("open(/dev/crypto)");
+                return 1;
+        }
+	init_crypto(fd);
 
 	/* Loop forever, accept()ing connections */
 	for (;;) {
@@ -174,6 +181,7 @@ int main(void)
         }
   			}
   			fprintf(stdout, "Remote says:\n");
+			decrypt(fd,buf);
   			write(1,buf,n);
   			printf("\n");
     }
@@ -182,19 +190,24 @@ int main(void)
   			// ALLIOS TREXE GETLINE
   			getLine(0,buf,sizeof(buf));
   			printf("\033[A\33[2K\r");
-  			//toupper_buf(buf, n);
-  			buf[sizeof(buf) - 1] = '\0';
-
+  			buf[sizeof(buf)-1] = '\0';
+			char original_buf[256];
+			memcpy(original_buf,buf,strlen(buf));
+			encrypt(fd,buf);
+		
   			if (insist_write(newsd, buf, strlen(buf)) != strlen(buf)) {
   				perror("write to remote peer failed");
   				break;
   			}
-  			fprintf(stdout, "I said:\n%s\n", buf);
+			fflush(stdout);
+  			fprintf(stdout, "I said:\n%s\n", original_buf);
   			fflush(stdout);
   			fflush(stdin);
 
 		}
 	}
+	finishcrypto(fd);
+
 	}
 
 	/* This will never happen */
