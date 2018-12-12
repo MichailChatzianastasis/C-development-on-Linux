@@ -101,7 +101,7 @@ int main(void)
   signal(SIGINT,intHandler);
 	fd_set rfds;
 	FD_ZERO(&rfds);
-	char buf[100];
+	char buf[256];
 	char addrstr[INET_ADDRSTRLEN];
 	int sel_ret;
 	ssize_t n;
@@ -168,7 +168,7 @@ int main(void)
 			sel_ret = select(newsd + 1,&rfds,NULL,NULL,NULL);
 			if(sel_ret == -1 ) perror("select error");
 			if(FD_ISSET(newsd,&rfds) ) {
-  			n = read(newsd, buf, sizeof(buf));
+  			n = read(newsd, buf, 256);
   			if (n <= 0) {
   				if (n < 0)
   					perror("read from remote peer failed");
@@ -182,25 +182,30 @@ int main(void)
   			}
   			fprintf(stdout, "Remote says:\n");
 			decrypt(fd,buf);
-  			write(1,buf,n);
+  			if (insist_write(1,buf,strlen(buf))!=strlen(buf)) {
+				perror("write");
+				exit(1);
+			}
   			printf("\n");
+			fflush(stdout);
+			fflush(stdin);
+			memset(buf,'\0',256);
     }
 			else if (FD_ISSET(0,&rfds)){
 
   			// ALLIOS TREXE GETLINE
-  			getLine(0,buf,sizeof(buf));
+  			getLine(0,buf,256);
   			printf("\033[A\33[2K\r");
-  			buf[sizeof(buf)-1] = '\0';
 			char original_buf[256];
+  			original_buf[strlen(buf)] = '\0';
 			memcpy(original_buf,buf,strlen(buf));
 			encrypt(fd,buf);
 		
-  			if (insist_write(newsd, buf, strlen(buf)) != strlen(buf)) {
+  			if (insist_write(newsd, buf,256) != 256) {
   				perror("write to remote peer failed");
   				break;
   			}
-			fflush(stdout);
-  			fprintf(stdout, "I said:\n%s\n", original_buf);
+  			fprintf(stdout,"I said:\n%s\n", original_buf);
   			fflush(stdout);
   			fflush(stdin);
 

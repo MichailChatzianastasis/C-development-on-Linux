@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     /* Read answer and write it to standard output */
     if(FD_ISSET(sd,&rfds) ) {
 
-      n = read(sd, buf, sizeof(buf));
+      n = read(sd, buf, 256);
 
       if (n < 0) {
         perror("read");
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
       if (n <= 0) break;
       decrypt(fd,buf);
       fprintf(stdout, "Remote says:\n");
-      if (insist_write(0, buf, n) != n) {
+      if (insist_write(1, buf, strlen(buf)) != strlen(buf)) {
         perror("write");
         exit(1);
       }
@@ -161,15 +161,14 @@ int main(int argc, char *argv[])
 		else if(FD_ISSET(0,&rfds) ) {
 
 			
-			getLine(0,buf,sizeof(buf));
+			getLine(0,buf,256);
 			char original_buf[256] ;
 			printf("\033[A\33[2K\r");
-		 	//strncpy(buf, HELLO_THERE, sizeof(buf));
-			buf[sizeof(buf)-1] = '\0';
+			original_buf[strlen(buf)] = '\0';
 			memcpy(original_buf,buf,strlen(buf));
 			encrypt(fd,buf);
 			/* Say something... */
-			if (insist_write(sd, buf, strlen(buf)) != strlen(buf)) {
+			if (insist_write(sd, buf, 256) != 256) {
 				perror("write");
 				exit(1);
 			}

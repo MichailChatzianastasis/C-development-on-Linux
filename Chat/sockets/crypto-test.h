@@ -96,9 +96,9 @@ static int encrypt(int cfd, char* buf)
 	/*
 	 * Encrypt data.in to data.encrypted
 	 */
-	
-	memcpy(data.in,buf,sizeof(buf));
-	data.in[sizeof(buf)+1]='\0';
+	memset(data.in,'\0',256);
+	memcpy(data.in,buf,strlen(buf));
+//	data.in[strlen(buf)+1]='\0';
 	cryp.ses = sess.ses;
 	cryp.len = 256;
 	cryp.src = data.in;
@@ -115,8 +115,9 @@ static int encrypt(int cfd, char* buf)
 }
 static int decrypt(int cfd, char* buf)
 {	
-	memcpy(data.in,buf,sizeof(buf));
-	data.in[sizeof(buf)+1]='\0';
+
+	memcpy(data.in,buf,strlen(buf));
+	//data.in[strlen(buf)+1]='\0';
 	cryp.len=  256;
 	cryp.ses = sess.ses;
 	cryp.src = buf;
