@@ -3,7 +3,7 @@
 # disabled by default. To re-enable it uncomment the
 # corresponding CFLAG.
 #
-CRYPTODEV_CFLAGS ?= #-DENABLE_ASYNC
+CRYPTODEV_CFLAGS ?= -I/usr/lib/gcc/x86_64-linux-gnu/5/include/ #-DENABLE_ASYNC
 KBUILD_CFLAGS += -I$(src) $(CRYPTODEV_CFLAGS)
 KERNEL_DIR ?= /lib/modules/$(shell uname -r)/build
 VERSION = 1.9
