@@ -88,15 +88,16 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
         /* ?? */
         int *host_fd = elem->out_sg[1].iov_base;
         unsigned int *cmd = elem->out_sg[2].iov_base;
-        memcpy(input_msg, "Host: Welcome to the virtio World!", 35);
-        printf("Guest says: %s\n", output_msg);
         printf("We say: %s\n", input_msg);
         // break;
         switch(*cmd) {
         case CIOCGSESSION:
-            unsigned char *sesskey = elem->out_sg[3].iov_base;
+          {  unsigned char *sesskey = elem->out_sg[3].iov_base;
             unsigned char *output_msg = elem->out_sg[4].iov_base;
+            printf("Guest says: %s\n", output_msg);
             unsigned char *input_msg = elem->in_sg[0].iov_base;
+            memcpy(input_msg, "Host: Welcome to the virtio World!", 35);
+
             struct session_op *session_sg = elem->in_sg[1].iov_base;
             int *ret_sg = elem->in_sg[2].iov_base;
             session_sg->key = sesskey;
@@ -106,11 +107,15 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
             }
             else { *ret = 0;}
             break;
-
-        case CIOCFSESSION:
-            unsigned char *output_msg = elem->out_sg[3].iov_base;
+        }
+        case CIOCFSESSION: 
+    {           unsigned char *output_msg = elem->out_sg[3].iov_base;
+            printf("Guest says: %s\n", output_msg);
+        
             int *sess_id_sg = elem->out_sg[4].iov_base;
             unsigned char *input_msg = elem->in_sg[0].iov_base;
+            memcpy(input_msg, "Host: Welcome to the virtio World!", 35);
+
             int *ret_sg = elem->in_sg[1].iov_base;
             if (ioctl(*host_fd, CIOCFSESSION, sess_id_sg))
             {
@@ -122,15 +127,18 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
                 *ret = 0;
             }
             break;
-
+    }
         case CIOCCRYPT:
-            struct crypt_op *crypt = elem->out_sg[3].iov_base;
+     {       struct crypt_op *crypt = elem->out_sg[3].iov_base;
             unsigned char *output_msg = elem->out_sg[4].iov_base;
+            printf("Guest says: %s\n", output_msg);
             unsigned char *src = elem->out_sg[5].iov_base;
             unsigned char *iv = elem->out_sg[6].iov_base;
             int *ret_sg = elem->in_sg[0].iov_base;
             unsigned char *dst = elem->in_sg[1].iov_base;
             unsigned char *input_msg = elem->in_sg[2].iov_base;
+            memcpy(input_msg, "Host: Welcome to the virtio World!", 35);
+
             crypt->src = src;
             crypt->iv = iv;
             crypt->dst = dst;
@@ -144,7 +152,8 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
                 *ret = 0;
             }
             break;
-        default:
+             } 
+                    default:
             DEBUG("Unknown syscall_type");
             break;
     }
