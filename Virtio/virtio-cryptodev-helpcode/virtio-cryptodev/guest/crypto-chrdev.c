@@ -184,14 +184,18 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 {
 	long ret = 0;
 	int err;
+	uint32_t id;
+	struct crypt_op cryp, temp1;
 	struct crypto_open_file *crof = filp->private_data;
 	struct crypto_device *crdev = crof->crdev;
 	struct virtqueue *vq = crdev->vq;
+	struct session_op sess;
 	struct scatterlist syscall_type_sg, output_msg_sg, input_msg_sg,
-	                   *sgs[3], host_fd_sg, cmd_sg;
+		*sgs[3], host_fd_sg, cmd_sg, session_sg, ret_sg, sess_id_sg, seskey_sg,
+		cryp_src_sg, cryp_dst_sg, cryp_iv_sg, cryp_op_sg;
 	unsigned int num_out, num_in, len;
 #define MSG_LEN 100
-	unsigned char *output_msg, *input_msg;
+	unsigned char *output_msg, *input_msg,*seskey,*src,*dst,*iv,*temp;
 	unsigned int *syscall_type;
 	struct session_op sess;
 	debug("Entering");
@@ -222,43 +226,84 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	switch (cmd) {
 	case CIOCGSESSION:
 		sg_init_one(&cmd_sg,&cmd, sizeof(cmd));
-		sgs[num_out++] =  &cmd_sg;
-
+		sgs[num_out++] =  &cmd_sg; //2
+		err = copy_from_user(&sess, (struct session_op *)arg, sizeof(struct session_op));
+		seskey = kzalloc(sess.keylen * sizeof(char), GFP_KERNEL);
+		copy_from_user(seskey, sess.key, sizeof(char) * sess.keylen);
 		debug("CIOCGSESSION");
 		memcpy(output_msg, "Hello HOST from ioctl CIOCGSESSION.", 36);
 		input_msg[0] = '\0';
+		sg_init_one(&seskey_sg, seskey, sizeof(char) * sess.keylen);
+		sgs[num_out++] = &seskey_sg;
+
 		sg_init_one(&output_msg_sg, output_msg, MSG_LEN);
 		sgs[num_out++] = &output_msg_sg;
+
 		sg_init_one(&input_msg_sg, input_msg, MSG_LEN);
 		sgs[num_out + num_in++] = &input_msg_sg;
+
+		sg_init_one(&session_sg, &sess, sizeof(sess));
+		sgs[num_out + num_in++] = &session_sg;
+
+		sg_init_one(&ret_sg, &host_ret, sizeof(host_ret));
+		sgs[num_out + num_in++] = &ret_sg;
+
 
 		break;
 
 	case CIOCFSESSION:
 		sg_init_one(&cmd_sg, &cmd, sizeof(cmd));
-		sgs[num_out++] = &cmd_sg;
+		sgs[num_out++] = &cmd_sg; //2
 
 		debug("CIOCFSESSION");
 		memcpy(output_msg, "Hello HOST from ioctl CIOCFSESSION.", 36);
 		input_msg[0] = '\0';
 		sg_init_one(&output_msg_sg, output_msg, MSG_LEN);
 		sgs[num_out++] = &output_msg_sg;
+		copy_from_user(&id, (uint32_t *)arg, sizeof(id));
+		sg_init_one(&sess_id_sg, &id, sizeof(id));
+		sgs[num_out++] = &sess_id_sg;
+
 		sg_init_one(&input_msg_sg, input_msg, MSG_LEN);
 		sgs[num_out + num_in++] = &input_msg_sg;
 
+		sg_init_one(&ret_sg, &host_ret, sizeof(int));
+		sgs[num_out + num_in++] = &ret_sg;
 		break;
 
 	case CIOCCRYPT:
 		sg_init_one(&cmd_sg, &cmd, sizeof(cmd));
-		sgs[num_out++] = &cmd_sg;
+		sgs[num_out++] = &cmd_sg; //2
+		copy_from_user(&cryp, (struct crypt_op *)arg, sizeof(struct crypt_op));
+		sg_init_one(&cryp_op_sg, &cryp, sizeof(cryp));
+		sgs[num_out++] = &cryp_op_sg;
+
 		debug("CIOCCRYPT");
 		memcpy(output_msg, "Hello HOST from ioctl CIOCCRYPT.", 33);
 		input_msg[0] = '\0';
 		sg_init_one(&output_msg_sg, output_msg, MSG_LEN);
 		sgs[num_out++] = &output_msg_sg;
+		src = kzalloc(cryp.len * sizeof(char), GFP_KERNEL);
+		copy_from_user(src, cryp.src, cryp.len * sizeof(char));
+		sg_init_one(&cryp_src_sg, src, cryp.len * sizeof(char));
+		sgs[num_out++] = &cryp_src_sg;
+		iv = kzalloc(16 * sizeof(char), GFP_KERNEL);
+		copy_from_user(iv, cryp.iv, 16 * sizeof(char));
+		sg_init_one(&cryp_iv_sg, iv, cryp.len * sizeof(char));
+		sgs[num_out++] = &cryp_iv_sg;
+		sg_init_one(&ret_sg, &host_ret, sizeof(int));
+		sgs[num_out + num_in++] = &ret_sg;
+		temp=crypt.dst;
+		dst = kzalloc(cryp.len * sizeof(char), GFP_KERNEL);
+		sg_init_one(&cryp_dst_sg, dst, cryp.len * sizeof(char));
+		sgs[num_out + num_in++] = &cryp_dst_sg;
 		sg_init_one(&input_msg_sg, input_msg, MSG_LEN);
 		sgs[num_out + num_in++] = &input_msg_sg;
-
+	  //Wait for the host to process our data.
+		
+		
+		
+		
 		break;
 
 	default:
@@ -273,12 +318,13 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	 **/
 	/* ?? */
 	/* ?? Lock ?? */
+	spin_lock_irqsave(&crdev->lock, flags);
 	err = virtqueue_add_sgs(vq, sgs, num_out, num_in,
 	                        &syscall_type_sg, GFP_ATOMIC);
 	virtqueue_kick(vq);
 	while (virtqueue_get_buf(vq, &len) == NULL)
 		/* do nothing */;
-
+	spin_unlock_irqrestore(&crdev->lock, flags);
 	debug("We said: '%s'", output_msg);
 	debug("Host answered: '%s'", input_msg);
 
@@ -286,9 +332,40 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	kfree(input_msg);
 	kfree(syscall_type);
 
-	debug("Leaving");
+	
+	switch (cmd)
+	{
+	case CIOCGSESSION:
+		debug("CIOCGSESSION RET");
+		if (copy_to_user((struct session_op *)arg, &sess, sizeof(struct session_op)))
+		{
+			debug("Copy to user");
+			ret = -1;
+			goto fail;
+		}
 
-	return ret;
+		break;
+
+	case CIOCFSESSION:
+		debug("CIOCFSESSION RET");
+
+		break;
+
+	case CIOCCRYPT:
+		debug("CIOCCRYPT RET");
+		if (copy_to_user(temp, dst, cryp.len * sizeof(char)))
+		{
+			debug("Copy to user");
+			ret = -1;
+			goto fail;
+		}
+
+		break;
+	}
+	debug("We said: '%s'", output_msg);
+	debug("Host answered: '%s'", input_msg);
+	debug("Leaving");
+	// return ret;
 }
 
 static ssize_t crypto_chrdev_read(struct file *filp, char __user *usrbuf, 
