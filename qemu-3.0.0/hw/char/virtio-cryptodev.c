@@ -75,12 +75,12 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
       {  DEBUG("VIRTIO_CRYPTODEV_SYSCALL_TYPE_CLOSE");
         /* ?? */
         int *host_fd = elem->out_sg[1].iov_base;
-        int x;
-        if(x = close(*host_fd)<0){
+        
+        if(close(*host_fd)<0){
             perror("close");
             return;
         }
-        *elem->in_sg[0] = x;
+        *elem->in_sg[0].iov_base = 0;
         break;
       }
     case VIRTIO_CRYPTODEV_SYSCALL_TYPE_IOCTL:
@@ -106,7 +106,7 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
                 *ret_sg = -1;
                 perror("CIOCGSESSION ERROR");
             }
-            else { *ret = 0;}
+            else { *ret_sg = 0;}
             break;
         }
         
@@ -127,7 +127,7 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
             }
             else
             {
-                *ret = 0;
+                *ret_sg = 0;
             }
             break;
     }
@@ -153,7 +153,7 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
             }
             else
             {
-                *ret = 0;
+                *ret_sg = 0;
             }
             break;
              } 
