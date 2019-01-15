@@ -60,6 +60,8 @@ out:
 
 static int crypto_chrdev_open(struct inode *inode, struct file *filp)
 {
+	unsigned int num_in=0;
+	unsigned int num_out=0;
 	int ret = 0;
 	int err;
 	unsigned int len;
@@ -67,6 +69,7 @@ static int crypto_chrdev_open(struct inode *inode, struct file *filp)
 	struct crypto_device *crdev;
 	unsigned int *syscall_type;
 	int *host_fd;
+	struct scatterlist syscall_type_sg,host_fd_sg, *sgs[2];
 
 	debug("Entering");
 
@@ -102,18 +105,38 @@ static int crypto_chrdev_open(struct inode *inode, struct file *filp)
 	 * file descriptor from the host.
 	 **/
 	/* ?? */
+	sg_init_one(&syscall_type_sg,&syscall_type,sizeof(syscall_type));
+	sgs[num_out++] = &syscall_type_sg;
+	sg_init_one(&host_fd_sg, &host_fd, sizeof(host_fd));
+	sgs[num_out+num_in++]=&host_fd_sg;
 
+	sema_init(&crdev->sema,1);
+
+	down_interruptible(&crdev->sema);
+	
+		err = virtqueue_add_sgs(crdev->vq, sgs, num_out, num_in,
+								&syscall_type_sg, GFP_ATOMIC);
+
+		virtqueue_kick(crdev->vq);
+		while(virtqueue_get_buf(crdev->vq,&len)==NULL); //ooura wait event interruptible 
+		if ((crof->host_fd=host_fd)<=0) {
+			ret= -ENODEV;
+			goto fail;
+		}
+	
 	/**
 	 * Wait for the host to process our data.
 	 **/
 	/* ?? */
 
+	up(&crdev->sema);
 
 	/* If host failed to open() return -ENODEV. */
 	/* ?? */
 		
 
 fail:
+	up(&crdev->sema);
 	debug("Leaving");
 	return ret;
 }
@@ -124,7 +147,7 @@ static int crypto_chrdev_release(struct inode *inode, struct file *filp)
 	struct crypto_open_file *crof = filp->private_data;
 	struct crypto_device *crdev = crof->crdev;
 	unsigned int *syscall_type;
-
+	struct scatterlist syscall_type_sg, host_fd_sg, ret_sg, *sgs[3];
 	debug("Entering");
 
 	syscall_type = kzalloc(sizeof(*syscall_type), GFP_KERNEL);
@@ -134,12 +157,22 @@ static int crypto_chrdev_release(struct inode *inode, struct file *filp)
 	 * Send data to the host.
 	 **/
 	/* ?? */
-
+	sg_init_one(&syscall_type_sg, &syscall_type, sizeof(syscall_type));
+	sgs[0] = &syscall_type_sg;
+	sg_init_one(&host_fd_sg, &crof->host_fd, sizeof(crof->host_fd));
+	sgs[1] = &host_fd_sg;
+	sg_init_one(&ret_sg, &ret, sizeof(ret));
+	sgs[2] = &ret_sg;
+	down_interruptible(crdev->sema);
+		virtqueue_add_sgs(crdev->vq,sgs,2,1,&syscall_type_sg,GFP_ATOMIC);
+		virtqueue_kick(crdev->vq);
+	
 	/**
 	 * Wait for the host to process our data.
 	 **/
 	/* ?? */
-
+	while(virtqueue_get_buf(crdev->vq,&len)==NULL);
+	up(crdev->sema);
 	kfree(crof);
 	debug("Leaving");
 	return ret;
@@ -155,12 +188,12 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	struct crypto_device *crdev = crof->crdev;
 	struct virtqueue *vq = crdev->vq;
 	struct scatterlist syscall_type_sg, output_msg_sg, input_msg_sg,
-	                   *sgs[3];
+	                   *sgs[3], host_fd_sg, cmd_sg;
 	unsigned int num_out, num_in, len;
 #define MSG_LEN 100
 	unsigned char *output_msg, *input_msg;
 	unsigned int *syscall_type;
-
+	struct session_op sess;
 	debug("Entering");
 
 	/**
@@ -179,6 +212,8 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	 **/
 	sg_init_one(&syscall_type_sg, syscall_type, sizeof(*syscall_type));
 	sgs[num_out++] = &syscall_type_sg;
+	sg_init_one(&host_fd_sg,&crof->host_fd,sizeof(crof->host_fd));
+	sgs[num_out++];
 	/* ?? */
 
 	/**
@@ -186,6 +221,9 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	 **/
 	switch (cmd) {
 	case CIOCGSESSION:
+		sg_init_one(&cmd_sg,&cmd, sizeof(cmd));
+		sgs[num_out++] =  &cmd_sg;
+
 		debug("CIOCGSESSION");
 		memcpy(output_msg, "Hello HOST from ioctl CIOCGSESSION.", 36);
 		input_msg[0] = '\0';
@@ -197,6 +235,9 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	case CIOCFSESSION:
+		sg_init_one(&cmd_sg, &cmd, sizeof(cmd));
+		sgs[num_out++] = &cmd_sg;
+
 		debug("CIOCFSESSION");
 		memcpy(output_msg, "Hello HOST from ioctl CIOCFSESSION.", 36);
 		input_msg[0] = '\0';
@@ -208,6 +249,8 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	case CIOCCRYPT:
+		sg_init_one(&cmd_sg, &cmd, sizeof(cmd));
+		sgs[num_out++] = &cmd_sg;
 		debug("CIOCCRYPT");
 		memcpy(output_msg, "Hello HOST from ioctl CIOCCRYPT.", 33);
 		input_msg[0] = '\0';
