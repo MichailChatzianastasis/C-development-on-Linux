@@ -80,7 +80,7 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
             perror("close");
             return;
         }
-        *elem->in_sg[0].iov_base = 0;
+      //  *elem->in_sg[0].iov_base = 0;
         break;
       }
     case VIRTIO_CRYPTODEV_SYSCALL_TYPE_IOCTL:
