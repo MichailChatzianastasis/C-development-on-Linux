@@ -67,28 +67,88 @@ static void vq_handle_output(VirtIODevice *vdev, VirtQueue *vq)
     switch (*syscall_type) {
     case VIRTIO_CRYPTODEV_SYSCALL_TYPE_OPEN:
         DEBUG("VIRTIO_CRYPTODEV_SYSCALL_TYPE_OPEN");
-        /* ?? */
+        int *host_fd = elem->in_sg[0].iov_base;
+        *host_fd = open("/dev/crypto",O_RDWR);
         break;
 
     case VIRTIO_CRYPTODEV_SYSCALL_TYPE_CLOSE:
         DEBUG("VIRTIO_CRYPTODEV_SYSCALL_TYPE_CLOSE");
         /* ?? */
+        int *host_fd = elem->out_sg[1].iov_base;
+        int x;
+        if(x = close(*host_fd)<0){
+            perror("close");
+            return;
+        }
+        *elem->in_sg[0] = x;
         break;
 
     case VIRTIO_CRYPTODEV_SYSCALL_TYPE_IOCTL:
         DEBUG("VIRTIO_CRYPTODEV_SYSCALL_TYPE_IOCTL");
         /* ?? */
-        unsigned char *output_msg = elem->out_sg[1].iov_base;
-        unsigned char *input_msg = elem->in_sg[0].iov_base;
+        int *host_fd = elem->out_sg[1].iov_base;
+        unsigned int *cmd = elem->out_sg[2].iov_base;
         memcpy(input_msg, "Host: Welcome to the virtio World!", 35);
         printf("Guest says: %s\n", output_msg);
         printf("We say: %s\n", input_msg);
-        break;
+        // break;
+        switch(*cmd) {
+        case CIOCGSESSION:
+            unsigned char *sesskey = elem->out_sg[3].iov_base;
+            unsigned char *output_msg = elem->out_sg[4].iov_base;
+            unsigned char *input_msg = elem->in_sg[0].iov_base;
+            struct session_op *session_sg = elem->in_sg[1].iov_base;
+            int *ret_sg = elem->in_sg[2].iov_base;
+            session_sg->key = sesskey;
+            if(ioctl(*host_fd,CIOCGSESSION,session_sg)){
+                *ret_sg = -1;
+                perror("CIOCGSESSION ERROR");
+            }
+            else { *ret = 0;}
+            break;
 
-    default:
-        DEBUG("Unknown syscall_type");
-        break;
+        case CIOCFSESSION:
+            unsigned char *output_msg = elem->out_sg[3].iov_base;
+            int *sess_id_sg = elem->out_sg[4].iov_base;
+            unsigned char *input_msg = elem->in_sg[0].iov_base;
+            int *ret_sg = elem->in_sg[1].iov_base;
+            if (ioctl(*host_fd, CIOCFSESSION, sess_id_sg))
+            {
+                *ret_sg = -1;
+                perror("CIOCFSESSION ERROR");
+            }
+            else
+            {
+                *ret = 0;
+            }
+            break;
+
+        case CIOCCRYPT:
+            struct crypt_op *crypt = elem->out_sg[3].iov_base;
+            unsigned char *output_msg = elem->out_sg[4].iov_base;
+            unsigned char *src = elem->out_sg[5].iov_base;
+            unsigned char *iv = elem->out_sg[6].iov_base;
+            int *ret_sg = elem->in_sg[0].iov_base;
+            unsigned char *dst = elem->in_sg[1].iov_base;
+            unsigned char *input_msg = elem->in_sg[2].iov_base;
+            crypt->src = src;
+            crypt->iv = iv;
+            crypt->dst = dst;
+            if (ioctl(*host_fd, CIOCCRYPT, crypt))
+            {
+                *ret_sg = -1;
+                perror("CIOCCRYPT ERROR");
+            }
+            else
+            {
+                *ret = 0;
+            }
+            break;
+        default:
+            DEBUG("Unknown syscall_type");
+            break;
     }
+}
 
     virtqueue_push(vq, elem, 0);
     virtio_notify(vdev, vq);
