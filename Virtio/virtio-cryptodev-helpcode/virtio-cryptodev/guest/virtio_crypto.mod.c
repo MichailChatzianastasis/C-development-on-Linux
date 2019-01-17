@@ -20,13 +20,16 @@ __attribute__((section("__versions"))) = {
 	{ 0x4c5efdbd, __VMLINUX_SYMBOL_STR(module_layout) },
 	{ 0x1a505334, __VMLINUX_SYMBOL_STR(cdev_del) },
 	{ 0xb53bd8f5, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
+	{ 0xd2b09ce5, __VMLINUX_SYMBOL_STR(__kmalloc) },
 	{ 0x4b6fd3e3, __VMLINUX_SYMBOL_STR(cdev_init) },
 	{ 0x784213a6, __VMLINUX_SYMBOL_STR(pv_lock_ops) },
 	{ 0xd8e484f0, __VMLINUX_SYMBOL_STR(register_chrdev_region) },
+	{ 0xf22449ae, __VMLINUX_SYMBOL_STR(down_interruptible) },
 	{ 0x11229f12, __VMLINUX_SYMBOL_STR(virtqueue_kick) },
 	{ 0x7485e15e, __VMLINUX_SYMBOL_STR(unregister_chrdev_region) },
-	{ 0xb60803a, __VMLINUX_SYMBOL_STR(nonseekable_open) },
 	{ 0x661ffad1, __VMLINUX_SYMBOL_STR(virtqueue_get_buf) },
+	{ 0xb60803a, __VMLINUX_SYMBOL_STR(nonseekable_open) },
+	{ 0x4f8b5ddb, __VMLINUX_SYMBOL_STR(_copy_to_user) },
 	{ 0x3d81aeb6, __VMLINUX_SYMBOL_STR(virtqueue_add_sgs) },
 	{ 0x8f64aa4, __VMLINUX_SYMBOL_STR(_raw_spin_unlock_irqrestore) },
 	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
@@ -40,6 +43,8 @@ __attribute__((section("__versions"))) = {
 	{ 0xb6244511, __VMLINUX_SYMBOL_STR(sg_init_one) },
 	{ 0x37a0cba, __VMLINUX_SYMBOL_STR(kfree) },
 	{ 0xd3719d59, __VMLINUX_SYMBOL_STR(paravirt_ticketlocks_enabled) },
+	{ 0x71e3cecb, __VMLINUX_SYMBOL_STR(up) },
+	{ 0x4f6b400b, __VMLINUX_SYMBOL_STR(_copy_from_user) },
 	{ 0xfb39ca91, __VMLINUX_SYMBOL_STR(register_virtio_driver) },
 };
 
@@ -50,4 +55,4 @@ __attribute__((section(".modinfo"))) =
 
 MODULE_ALIAS("virtio:d0000001Ev*");
 
-MODULE_INFO(srcversion, "39CDDE53B6BE36A67E991E3");
+MODULE_INFO(srcversion, "7FFCD9776DDF47062A61D6F");

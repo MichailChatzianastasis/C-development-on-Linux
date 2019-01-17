@@ -66,7 +66,7 @@ static int crypto_chrdev_open(struct inode *inode, struct file *filp)
 	int err;
 	unsigned int len;
 	struct crypto_open_file *crof;
-	struct crypto_device *crdev;
+	struct crypto_device *crdev=NULL;
 	unsigned int *syscall_type;
 	int *host_fd;
 	struct scatterlist syscall_type_sg,host_fd_sg, *sgs[2];
@@ -119,7 +119,7 @@ static int crypto_chrdev_open(struct inode *inode, struct file *filp)
 
 		virtqueue_kick(crdev->vq);
 		while(virtqueue_get_buf(crdev->vq,&len)==NULL); //ooura wait event interruptible 
-		if ((crof->host_fd=host_fd)<=0) {
+		if ((crof->host_fd=*host_fd)<=0) {
 			ret= -ENODEV;
 			goto fail;
 		}
@@ -146,10 +146,10 @@ static int crypto_chrdev_release(struct inode *inode, struct file *filp)
 	int ret = 0;
 	struct crypto_open_file *crof = filp->private_data;
 	struct crypto_device *crdev = crof->crdev;
-	unsigned int *syscall_type;
+	unsigned int *syscall_type,len;
 	struct scatterlist syscall_type_sg, host_fd_sg, ret_sg, *sgs[3];
 	debug("Entering");
-
+	
 	syscall_type = kzalloc(sizeof(*syscall_type), GFP_KERNEL);
 	*syscall_type = VIRTIO_CRYPTODEV_SYSCALL_CLOSE;
 
@@ -163,7 +163,7 @@ static int crypto_chrdev_release(struct inode *inode, struct file *filp)
 	sgs[1] = &host_fd_sg;
 	sg_init_one(&ret_sg, &ret, sizeof(ret));
 	sgs[2] = &ret_sg;
-	down_interruptible(crdev->sema);
+	down_interruptible(&crdev->sema);
 		virtqueue_add_sgs(crdev->vq,sgs,2,1,&syscall_type_sg,GFP_ATOMIC);
 		virtqueue_kick(crdev->vq);
 	
@@ -172,7 +172,7 @@ static int crypto_chrdev_release(struct inode *inode, struct file *filp)
 	 **/
 	/* ?? */
 	while(virtqueue_get_buf(crdev->vq,&len)==NULL);
-	up(crdev->sema);
+	up(&crdev->sema);
 	kfree(crof);
 	debug("Leaving");
 	return ret;
@@ -182,6 +182,8 @@ static int crypto_chrdev_release(struct inode *inode, struct file *filp)
 static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd, 
                                 unsigned long arg)
 {
+	unsigned long flags;
+	long host_ret;
 	long ret = 0;
 	int err;
 	uint32_t id;
@@ -191,13 +193,12 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	struct virtqueue *vq = crdev->vq;
 	struct session_op sess;
 	struct scatterlist syscall_type_sg, output_msg_sg, input_msg_sg,
-		*sgs[3], host_fd_sg, cmd_sg, session_sg, ret_sg, sess_id_sg, seskey_sg,
+		*sgs[10], host_fd_sg, cmd_sg, session_sg, ret_sg, sess_id_sg, seskey_sg,
 		cryp_src_sg, cryp_dst_sg, cryp_iv_sg, cryp_op_sg;
 	unsigned int num_out, num_in, len;
 #define MSG_LEN 100
-	unsigned char *output_msg, *input_msg,*seskey,*src,*dst,*iv,*temp;
+	unsigned char *output_msg, *input_msg,*seskey,*src=NULL,*dst=NULL,*iv,*temp=NULL;
 	unsigned int *syscall_type;
-	struct session_op sess;
 	debug("Entering");
 
 	/**
@@ -217,9 +218,8 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	sg_init_one(&syscall_type_sg, syscall_type, sizeof(*syscall_type));
 	sgs[num_out++] = &syscall_type_sg;
 	sg_init_one(&host_fd_sg,&crof->host_fd,sizeof(crof->host_fd));
-	sgs[num_out++];
+	sgs[num_out++]=&host_fd_sg;
 	/* ?? */
-
 	/**
 	 *  Add all the cmd specific sg lists.
 	 **/
@@ -293,7 +293,7 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 		sgs[num_out++] = &cryp_iv_sg;
 		sg_init_one(&ret_sg, &host_ret, sizeof(int));
 		sgs[num_out + num_in++] = &ret_sg;
-		temp=crypt.dst;
+		temp=cryp.dst;
 		dst = kzalloc(cryp.len * sizeof(char), GFP_KERNEL);
 		sg_init_one(&cryp_dst_sg, dst, cryp.len * sizeof(char));
 		sgs[num_out + num_in++] = &cryp_dst_sg;
@@ -311,7 +311,6 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 
 		break;
 	}
-
 
 	/**
 	 * Wait for the host to process our data.
@@ -365,7 +364,11 @@ static long crypto_chrdev_ioctl(struct file *filp, unsigned int cmd,
 	debug("We said: '%s'", output_msg);
 	debug("Host answered: '%s'", input_msg);
 	debug("Leaving");
+	return 0;
 	// return ret;
+fail:
+	debug("fail");
+	return  1;
 }
 
 static ssize_t crypto_chrdev_read(struct file *filp, char __user *usrbuf, 

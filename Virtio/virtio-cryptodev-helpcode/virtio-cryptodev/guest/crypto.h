@@ -1,4 +1,5 @@
 #ifndef _CRYPTO_H
+
 #define _CRYPTO_H
 
 #define VIRTIO_CRYPTODEV_BLOCK_SIZE    16
@@ -37,7 +38,7 @@ struct crypto_device {
 
 	struct virtqueue *vq;
 	/* ?? Lock ?? */
-
+	spinlock_t lock;	
 	struct semaphore sema;
 
 	/* The minor number of the device. */
