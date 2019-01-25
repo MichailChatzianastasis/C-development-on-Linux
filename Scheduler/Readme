@@ -1,5 +1,5 @@
 
- <h2>Assigment 2: Implementation of a scheduler with Round-robin algorithm.</h2>
+ Assigment 2: Implementation of a scheduler with Round-robin algorithm.
  Pass from the command line N programms that you want to schedule
  and using fork and execve N proccesses will be born(one for each programm). Also, in shell.c there is an implementation of a shell ,  where the user types in terminal and using pipes communicate with the scheduler. The shell has the following commands:
 <br><br>  
@@ -13,4 +13,4 @@
       to create a new proccess that will execute that executable.
   
  • Command ’q’: The shell terminates his activity.
-</div>
+
