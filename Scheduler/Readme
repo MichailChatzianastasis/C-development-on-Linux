@@ -2,7 +2,7 @@
  Assigment 2: Implementation of a scheduler with Round-robin algorithm.
  Pass from the command line N programms that you want to schedule
  and using fork and execve N proccesses will be born(one for each programm). Also, in shell.c there is an implementation of a shell ,  where the user types in terminal and using pipes communicate with the scheduler. The shell has the following commands:
-<br><br>  
+  
  • Command ’p’: The scheduler prints in the output the list of all the proccesses,
      including the id, the PID, and the name of the exetuable.
  
