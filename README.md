@@ -1,24 +1,19 @@
 # C-Development-on-Linux
 
-<h1>  Low level programming in language c for the course Operating System in National Technical University of Athens. </h1>
+<h1>  Low level programming in language C for the course Operating System in National Technical University of Athens. </h1>
 
  
  <div>
  
- <h2>Assigment 2: Implementation of a scheduler with Round-robin algorithm.</h2>
- Pass from the command line N programms that you want to schedule
- and using fork and execve N proccesses will be born(one for each programm). Also, in shell.c there is an implementation of a shell ,  where the user types in terminal and using pipes communicate with the scheduler. The shell has the following commands:
-<br><br>  
- • Command ’p’: The scheduler prints in the output the list of all the proccesses,
-     including the id, the PID, and the name of the exetuable.
- 
- • Command ’k’: Takes as argument the id of a proccesses (careful: not the PID) 
-    and asks the scheduler to terminate that proccess
-  
- • Command ’e’: Takes as argument the name of an executable in the current directory and asks the scheduler,
-      to create a new proccess that will execute that executable.
-  
- • Command ’q’: The shell terminates his activity.
-</div>
+<h2>Kernel Drivers  Development</h2>
 
-Kernel Drivers  Development
+
+Assigment1:
+Implementation of a Linux kernel driver for a wireless sensor network. This network contains a number of voltage, temperature and light sensors. Developed a character device driver which takes input from the sensor network and exposes the information to userspace in different device files for each metric. The driver was developed as a Linux kernel module.
+
+Assigment2:
+Developed virtual hardware for QEMU-KVM framework. Designed and implemented a virtual VirtIO cryptographic device as part of QEMU. The device allows applications running inside the VM to access the real host crypto device using paravirtualization. The device was implemented using the split-driver model: a frontend (inside the VM) and a backend (part of QEMU). The frontend exposes to user space applications the same API as the host cryptodev while the backend receives calls from the frontend and forwards them for processing by the host cryptodev. To test the driver's functionality, an ecrypted chat application over TCP/IP sockets was implemented.
+ 
+ 
+ 
+
